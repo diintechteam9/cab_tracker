@@ -142,73 +142,76 @@ export default function Track() {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-gray-950 text-white font-sans overflow-hidden">
-      {/* HEADER - Compact for Mobile */}
-      <div className="p-3 md:p-4 bg-gray-900/80 backdrop-blur-2xl border-b border-white/5 flex justify-between items-center shadow-2xl z-20">
-        <div className="flex items-center gap-2.5">
-          <div className={`w-7 h-7 md:w-8 md:h-8 rounded-lg flex items-center justify-center font-black text-[10px] md:text-sm ${role === 'driver' ? 'bg-blue-600 shadow-[0_0_15px_rgba(37,99,235,0.3)]' : 'bg-emerald-600 shadow-[0_0_15px_rgba(16,185,129,0.3)]'}`}>
+    <div className="flex flex-col h-screen bg-fleet-bg text-slate-800 font-sans overflow-hidden">
+      {/* HEADER - Clean & White */}
+      <div className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6 shrink-0 z-30 shadow-sm transition-all">
+        <div className="flex items-center gap-3">
+          <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-xs md:text-sm text-white ${role === 'driver' ? 'bg-indigo-600' : 'bg-brand-mint'}`}>
             {role === 'driver' ? 'D' : 'P'}
           </div>
-          <h1 className="text-xs md:text-md font-black tracking-tight uppercase opacity-90">
+          <h1 className="text-base font-black text-slate-900 tracking-tight">
             {role === 'driver' ? 'Driver Console' : 'Safe Tracking'}
           </h1>
         </div>
+
         {tracking && (
-          <div className="bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20 flex items-center gap-2">
-            <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
-            <span className="text-[10px] font-black text-emerald-400">LIVE: {speed} KM/H</span>
+          <div className="bg-brand-mint/10 px-4 py-1.5 rounded-xl border border-brand-mint/20 flex items-center gap-2">
+            <div className="w-2 h-2 bg-brand-mint rounded-full animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.5)]"></div>
+            <span className="text-[10px] font-black text-brand-mint uppercase tracking-widest">{speed} KM/H LIVE</span>
           </div>
         )}
       </div>
 
-      {/* MAIN CONTENT AREA: Full-Height Sidebar + Right Panel (Map & Bottom) */}
-      <div className="flex-1 flex overflow-hidden bg-gray-950">
+      {/* MAIN CONTENT AREA */}
+      <div className="flex-1 flex overflow-hidden">
         {userData ? (
           <>
-            {/* JOURNEY SIDEBAR (LEFT) - Full Height */}
-            <div className="hidden md:flex w-72 h-full flex-col bg-gray-900/30 backdrop-blur-3xl border-r border-white/5 p-6 shrink-0 z-10">
-              <div className="flex flex-col gap-8 relative h-full">
-                <div className="pb-4 border-b border-white/5">
-                  <div className="flex items-center justify-between mb-2">
-                    <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.3em] opacity-50">Journey Roadmap</h3>
-                    <div className="flex flex-col items-end">
-                      <span className="text-[11px] font-black text-blue-400">{distanceInfo.distance}</span>
-                      <span className="text-[8px] text-gray-500 font-bold uppercase tracking-widest">{distanceInfo.duration}</span>
-                    </div>
+            {/* JOURNEY SIDEBAR (LEFT) - Fleet Card Style */}
+            <div className="hidden lg:flex w-80 h-full flex-col p-6 shrink-0 z-10 bg-fleet-bg overflow-y-auto pr-2">
+              <div className="bg-white rounded-[2rem] p-6 border border-gray-200 shadow-xl flex flex-col gap-8 h-full">
+                <div className="pb-5 border-b border-gray-100 flex items-center justify-between">
+                  <div>
+                    <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Journey Board</h3>
+                    <div className="text-sm font-black text-slate-900 mt-1">Ready to pickup</div>
                   </div>
-                  <div className="bg-indigo-500/10 inline-block px-2 py-0.5 rounded text-[9px] font-mono text-indigo-400 border border-indigo-500/20">
-                    ID: {userData.token.slice(0, 8)}
+                  <div className="text-right">
+                    <div className="text-sm font-black text-brand-mint leading-none">{distanceInfo.distance}</div>
+                    <div className="text-[8px] text-slate-400 font-bold uppercase tracking-widest mt-1">{distanceInfo.duration}</div>
                   </div>
                 </div>
 
-                <div className="flex flex-col gap-10 relative px-1">
-                  <div className="absolute left-[11px] top-8 bottom-8 w-[1px] bg-gradient-to-b from-blue-500 via-gray-800 to-emerald-500 border-l border-dashed border-gray-700"></div>
+                <div className="flex-1 space-y-10 relative">
+                  {/* Vertical Dotted Line */}
+                  <div className="absolute left-[11px] top-6 bottom-6 w-[1.5px] border-l-2 border-dotted border-slate-200"></div>
 
-                  <div className="flex gap-4 relative z-10">
-                    <div className="w-5 h-5 rounded-full bg-blue-600 border-[3px] border-gray-950 shadow-[0_0_15px_rgba(37,99,235,0.4)] flex-shrink-0 mt-0.5"></div>
+                  <div className="flex gap-5 relative z-10">
+                    <div className="w-6 h-6 rounded-full border-[3px] border-white bg-white shadow-xl flex-shrink-0 flex items-center justify-center">
+                      <div className="w-2.5 h-2.5 rounded-full border-2 border-blue-500"></div>
+                    </div>
                     <div>
-                      <div className="text-[8px] text-blue-400 font-bold uppercase tracking-[0.2em] mb-1 opacity-70">Pickup</div>
-                      <div className="text-xs font-semibold text-gray-200 leading-snug">
-                        {userData.sourceAddress || "Location pending..."}
+                      <div className="text-[8px] text-blue-500 font-black uppercase tracking-widest mb-1.5 opacity-60">Source Pickup</div>
+                      <div className="text-xs font-bold text-slate-800 leading-snug pr-4">
+                        {userData.sourceAddress || "Search for location..."}
                       </div>
                     </div>
                   </div>
 
-                  <div className="flex gap-4 relative z-10">
-                    <div className="w-5 h-5 rounded-full bg-emerald-600 border-[3px] border-gray-950 shadow-[0_0_15px_rgba(16,185,129,0.4)] flex-shrink-0 mt-0.5"></div>
+                  <div className="flex gap-5 relative z-10">
+                    <div className="w-6 h-6 rounded-full border-[3px] border-white bg-brand-mint shadow-[0_8px_20px_rgba(34,197,94,0.3)] flex-shrink-0"></div>
                     <div>
-                      <div className="text-[8px] text-emerald-400 font-bold uppercase tracking-[0.2em] mb-1 opacity-70">Drop-off</div>
-                      <div className="text-xs font-semibold text-gray-200 leading-snug">
+                      <div className="text-[8px] text-brand-mint font-black uppercase tracking-widest mb-1.5 opacity-60">Drop-off Destination</div>
+                      <div className="text-xs font-bold text-slate-800 leading-snug pr-4">
                         {userData.destAddress || "Destination pending..."}
                       </div>
                     </div>
                   </div>
                 </div>
 
-                <div className="mt-auto py-6 text-center border-t border-white/5">
-                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10">
-                    <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_5px_rgba(16,185,129,0.8)]"></div>
-                    <span className="text-[8px] font-bold text-gray-400 uppercase tracking-widest">Signal Locked</span>
+                <div className="pt-6 border-t border-gray-100 flex items-center justify-between">
+                  <div className="text-[10px] font-black text-slate-300 uppercase letter-spacing-[0.1em]">Trip ID: {userData.token.slice(-6)}</div>
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-brand-mint animate-pulse"></span>
+                    <span className="text-[9px] font-black text-slate-400 uppercase">Secure Connection</span>
                   </div>
                 </div>
               </div>
@@ -232,53 +235,53 @@ export default function Track() {
                 <div className="absolute top-4 right-4 flex flex-col gap-3 z-30">
                   <button
                     onClick={handleRecenter}
-                    className="w-10 h-10 rounded-full bg-gray-900/80 backdrop-blur-md border border-white/10 flex items-center justify-center text-white shadow-lg hover:bg-gray-800 transition-colors"
+                    className="w-12 h-12 rounded-2xl bg-white border border-gray-100 flex items-center justify-center text-slate-600 shadow-xl hover:bg-gray-50 transition-all active:scale-95 group"
                     title="Recenter on Driver"
                   >
-                    <span className="text-lg">🎯</span>
+                    <span className="text-xl group-hover:scale-110 transition-transform">🎯</span>
                   </button>
                   {passengerPos && (
-                    <div className="w-10 h-10 rounded-full bg-emerald-500/80 backdrop-blur-md border border-white/10 flex items-center justify-center text-white shadow-lg cursor-default">
-                      <span className="text-xs font-bold">ME</span>
+                    <div className="w-12 h-12 rounded-2xl bg-brand-mint border border-white flex items-center justify-center text-white shadow-xl shadow-brand-mint/20 cursor-default animate-in fade-in slide-in-from-right-4">
+                      <span className="text-[10px] font-black tracking-widest">ME</span>
                     </div>
                   )}
                 </div>
               </div>
 
               {/* BOTTOM DETAILS SECTION (Premium Bottom Sheet Style) */}
-              <div className="p-4 md:p-5 bg-gray-950/90 backdrop-blur-3xl border-t border-white/10 z-20 relative rounded-t-[2.5rem] md:rounded-t-none shadow-[0_-15px_40px_rgba(0,0,0,0.5)]">
+              <div className="p-5 md:p-6 bg-white/95 backdrop-blur-xl border-t border-gray-100 z-20 relative rounded-t-[3rem] md:rounded-t-none shadow-[0_-15px_40px_rgba(0,0,0,0.04)]">
                 {/* Mobile Handle */}
-                <div className="w-12 h-1 bg-white/10 rounded-full mx-auto mb-4 md:hidden"></div>
+                <div className="w-12 h-1 bg-gray-200 rounded-full mx-auto mb-5 md:hidden"></div>
 
-                <div className="flex items-center justify-between gap-4">
-                  <div className="flex items-center gap-3 md:gap-4">
-                    <div className="w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-gradient-to-br from-indigo-500/20 to-purple-500/20 flex items-center justify-center text-xl md:text-2xl shadow-inner border border-white/5 ring-1 ring-white/5">
+                <div className="flex items-center justify-between gap-4 max-w-5xl mx-auto">
+                  <div className="flex items-center gap-4">
+                    <div className="w-14 h-14 md:w-16 md:h-16 rounded-[2rem] bg-indigo-50 flex items-center justify-center text-2xl shadow-sm border border-indigo-100">
                       {role === 'driver' ? '👤' : '👨‍✈️'}
                     </div>
                     <div className="min-w-0">
                       <div className="flex items-center gap-2 mb-1">
-                        <span className="text-[7px] md:text-[8px] text-gray-400 font-black uppercase tracking-[0.25em] opacity-60">
-                          {role === 'driver' ? 'Passenger' : 'Driver Partner'}
+                        <span className="text-[8px] md:text-[9px] text-slate-400 font-black uppercase tracking-widest opacity-80">
+                          {role === 'driver' ? 'Passenger Detail' : 'Fleet Captain'}
                         </span>
-                        <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-blue-500/10 border border-blue-500/20">
-                          <span className="text-[8px] md:text-[9px] font-black text-blue-400">{distanceInfo.distance}</span>
+                        <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-brand-mint/10 border border-brand-mint/10">
+                          <span className="text-[9px] font-black text-brand-mint">{distanceInfo.distance}</span>
                         </div>
                       </div>
-                      <div className="text-base md:text-xl font-black text-white leading-tight truncate">
+                      <div className="text-lg md:text-2xl font-black text-slate-900 leading-none truncate">
                         {role === 'driver' ? (userData?.name || "Passenger") : (userData?.driverName || "Driver Not Assigned")}
                       </div>
-                      <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1.5">
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-[10px] opacity-40">📞</span>
-                          <span className="text-[10px] md:text-[11px] font-bold text-indigo-300/80">
+                      <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs">📞</span>
+                          <span className="text-xs font-bold text-slate-500">
                             {role === 'driver' ? (userData?.mobile || "No Number") : (userData?.driverMobile || "No Number")}
                           </span>
                         </div>
                         {role !== 'driver' && (
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-[10px] opacity-40">🚗</span>
-                            <span className="text-[10px] md:text-[11px] font-black text-white/50 tracking-wider">
-                              {userData?.vehicleNumber || "No Vehicle Number"}
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs">🚗</span>
+                            <span className="text-xs font-black text-slate-400 tracking-wider">
+                              {userData?.vehicleNumber || "Vehicle Pending"}
                             </span>
                           </div>
                         )}
@@ -286,23 +289,22 @@ export default function Track() {
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-3">
-                    {/* Desktop-only status indicator in bottom bar */}
-                    <div className="hidden lg:flex items-center gap-3 px-4 h-11 bg-white/5 rounded-xl border border-white/5 shadow-inner">
+                  <div className="flex items-center gap-4">
+                    {/* Desktop Status */}
+                    <div className="hidden lg:flex flex-col items-end px-4">
                       <div className="flex items-center gap-2">
-                        <div className={`w-2 h-2 rounded-full ${tracking ? 'bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]' : 'bg-red-500'}`}></div>
-                        <span className="text-[9px] font-black text-gray-300 uppercase tracking-widest leading-none">{status}</span>
+                        <div className={`w-2 h-2 rounded-full ${tracking ? 'bg-brand-mint shadow-[0_0_8px_rgba(34,197,94,0.5)]' : 'bg-slate-300'}`}></div>
+                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">{status}</span>
                       </div>
-                      <div className="w-px h-4 bg-white/10 mx-1"></div>
-                      <div className="text-[9px] font-mono text-indigo-300 opacity-40">#{userData?.token?.slice(0, 8)}</div>
+                      <div className="text-[9px] font-bold text-slate-300 mt-1 uppercase">Cloud Sync Active</div>
                     </div>
 
                     <a
                       href={`tel:${role === 'driver' ? userData?.mobile : userData?.driverMobile}`}
-                      className="w-12 h-12 md:w-auto md:px-6 md:h-12 bg-gradient-to-br from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 flex items-center justify-center gap-2 rounded-2xl shadow-xl shadow-emerald-500/20 active:scale-95 transition-all text-white font-black text-sm uppercase tracking-wider group"
+                      className="w-14 h-14 md:w-auto md:px-8 md:h-14 bg-brand-mint hover:bg-green-600 flex items-center justify-center gap-3 rounded-[1.5rem] shadow-xl shadow-brand-mint/20 active:scale-95 transition-all text-white font-black text-xs uppercase tracking-wider group"
                     >
-                      <span className="text-xl md:text-base">📞</span>
-                      <span className="hidden md:inline text-[11px]">Call Partner</span>
+                      <span className="text-xl md:text-lg">📞</span>
+                      <span className="hidden md:inline">Call Contact</span>
                     </a>
                   </div>
                 </div>
@@ -310,24 +312,39 @@ export default function Track() {
             </div>
           </>
         ) : (
-          <div className="flex-1 flex flex-col items-center justify-center space-y-4">
-            <div className="w-12 h-12 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
-            <p className="text-gray-500 text-[10px] font-bold uppercase tracking-[0.3em] animate-pulse">Synchronizing Data...</p>
+          <div className="flex-1 flex flex-col items-center justify-center space-y-6">
+            <div className="w-14 h-14 border-4 border-brand-mint border-t-transparent rounded-full animate-spin shadow-lg shadow-brand-mint/10"></div>
+            <div className="text-center">
+              <p className="text-slate-900 text-sm font-black uppercase tracking-widest">Enroute...</p>
+              <p className="text-slate-400 text-[10px] font-bold mt-1 uppercase tracking-widest">Fetching Radar Data</p>
+            </div>
           </div>
         )}
 
         {/* DRIVER START OVERLAY */}
         {role === 'driver' && !tracking && userData && (
-          <div className="absolute inset-0 z-30 bg-black/60 backdrop-blur-md flex items-center justify-center p-6">
-            <div className="bg-gray-900 border border-gray-800 p-6 rounded-3xl shadow-2xl text-center w-full max-w-xs space-y-6">
-              <div className="text-4xl">🚀</div>
-              <h2 className="text-xl font-black">Ready to Start?</h2>
+          <div className="absolute inset-0 z-[100] bg-slate-900/40 backdrop-blur-2xl flex items-center justify-center p-6">
+            <div className="bg-white border border-gray-100 p-10 rounded-[3rem] shadow-2xl text-center w-full max-w-sm space-y-8 animate-in zoom-in-95 duration-300">
+              <div className="relative inline-block">
+                <div className="w-24 h-24 rounded-[2.5rem] bg-indigo-50 flex items-center justify-center text-5xl mx-auto shadow-inner">🚀</div>
+                <div className="absolute -top-2 -right-2 w-8 h-8 rounded-full bg-brand-mint border-4 border-white flex items-center justify-center animate-bounce">
+                  <span className="text-white text-[10px] font-black">!</span>
+                </div>
+              </div>
+              <div>
+                <h2 className="text-2xl font-black text-slate-900">Mission Ready?</h2>
+                <p className="text-slate-400 text-xs font-medium mt-2">Start sharing your live location with passenger</p>
+              </div>
               <button
                 onClick={startTracking}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-2xl shadow-lg active:scale-95 transition-all text-sm"
+                className="w-full bg-slate-900 hover:bg-black text-white font-black py-5 rounded-[2rem] shadow-2xl active:scale-[0.97] transition-all text-sm uppercase tracking-widest"
               >
-                GO ONLINE
+                Go Online & Track
               </button>
+              <div className="pt-4 border-t border-gray-50 flex items-center justify-center gap-2">
+                <div className="w-1.5 h-1.5 bg-brand-mint rounded-full"></div>
+                <span className="text-[9px] font-black text-slate-300 uppercase">GPS Accuracy: High</span>
+              </div>
             </div>
           </div>
         )}

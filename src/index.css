@@ -1,1 +1,12 @@
 @import "tailwindcss";
+
+@theme {
+  --color-brand-mint: #22c55e;
+  --color-brand-dark: #1e293b;
+  --color-fleet-bg: #f8fafc;
+}
+
+body {
+  @apply bg-fleet-bg text-slate-800 antialiased;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+}
