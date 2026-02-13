@@ -11,6 +11,7 @@ export default function Track() {
   const [speed, setSpeed] = useState(0);
   const [userData, setUserData] = useState(null);
   const [recenterFlag, setRecenterFlag] = useState(0);
+  const [distanceInfo, setDistanceInfo] = useState({ distance: "...", duration: "..." });
   const watchIdRef = useRef(null);
   const passengerWatchIdRef = useRef(null);
 
@@ -78,6 +79,10 @@ export default function Track() {
 
   const handleRecenter = () => {
     setRecenterFlag(prev => prev + 1);
+  };
+
+  const handleDirectionsUpdate = (info) => {
+    setDistanceInfo(info);
   };
 
   const startTracking = () => {
@@ -164,7 +169,13 @@ export default function Track() {
             <div className="hidden md:flex w-72 h-full flex-col bg-gray-900/30 backdrop-blur-3xl border-r border-white/5 p-6 shrink-0 z-10">
               <div className="flex flex-col gap-8 relative h-full">
                 <div className="pb-4 border-b border-white/5">
-                  <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.3em] mb-2 opacity-50">Journey Roadmap</h3>
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.3em] opacity-50">Journey Roadmap</h3>
+                    <div className="flex flex-col items-end">
+                      <span className="text-[11px] font-black text-blue-400">{distanceInfo.distance}</span>
+                      <span className="text-[8px] text-gray-500 font-bold uppercase tracking-widest">{distanceInfo.duration}</span>
+                    </div>
+                  </div>
                   <div className="bg-indigo-500/10 inline-block px-2 py-0.5 rounded text-[9px] font-mono text-indigo-400 border border-indigo-500/20">
                     ID: {userData.token.slice(0, 8)}
                   </div>
@@ -214,6 +225,7 @@ export default function Track() {
                   destination={userData.destination}
                   passengerPos={passengerPos}
                   recenterFlag={recenterFlag}
+                  onDirectionsUpdate={handleDirectionsUpdate}
                 />
 
                 {/* FLOATING ACTION BUTTONS */}
@@ -246,6 +258,9 @@ export default function Track() {
                       </div>
                       <div className="text-sm md:text-base font-black text-white flex items-center gap-2 truncate">
                         {role === 'driver' ? (userData?.name || "Passenger") : (userData?.driverName || "Driver Not Assigned")}
+                        <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-blue-500/10 border border-blue-500/20 ml-2">
+                          <span className="text-[10px] font-black text-blue-400">{distanceInfo.distance}</span>
+                        </div>
                       </div>
                       <div className="flex flex-col gap-1 mt-1">
                         <div className="flex items-center gap-2">
