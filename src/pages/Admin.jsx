@@ -6,6 +6,9 @@ export default function Admin() {
   const [activeTab, setActiveTab] = useState("create");
   const [name, setName] = useState("");
   const [mobile, setMobile] = useState("");
+  const [driverName, setDriverName] = useState("");
+  const [driverMobile, setDriverMobile] = useState("");
+  const [vehicleNumber, setVehicleNumber] = useState("");
   const [sourceText, setSourceText] = useState("");
   const [destText, setDestText] = useState("");
 
@@ -79,8 +82,8 @@ export default function Admin() {
   };
 
   const createUser = async () => {
-    if (!name || !mobile || !source || !destination) {
-      alert("Please select locations from the dropdown hints");
+    if (!name || !mobile || !source || !destination || !driverName || !driverMobile || !vehicleNumber) {
+      alert("Please fill all details and select locations from hints");
       return;
     }
 
@@ -92,8 +95,13 @@ export default function Admin() {
         mobile,
         sourceLat: source.lat,
         sourceLng: source.lng,
+        sourceAddress: sourceText,
         destLat: destination.lat,
         destLng: destination.lng,
+        destAddress: destText,
+        driverName,
+        driverMobile,
+        vehicleNumber,
       }),
     });
 
@@ -103,6 +111,9 @@ export default function Admin() {
       fetchUsers();
       setName("");
       setMobile("");
+      setDriverName("");
+      setDriverMobile("");
+      setVehicleNumber("");
       setSourceText("");
       setDestText("");
       setSource(null);
@@ -125,7 +136,7 @@ export default function Admin() {
   };
 
   const copyLink = (token) => {
-    const link = `${window.location.origin}/track?token=${token}`;
+    const link = `${window.location.origin}/track?token=${token}&role=passenger`;
     navigator.clipboard.writeText(link);
     alert("Link copied!");
   };
@@ -195,6 +206,28 @@ export default function Admin() {
                   placeholder="Destination (Hint enabled)"
                   value={destText}
                   onChange={(e) => setDestText(e.target.value)}
+                />
+              </div>
+
+              <div className="pt-2 border-t border-gray-800 space-y-4">
+                <h4 className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Driver Details</h4>
+                <input
+                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-emerald-500 outline-none"
+                  placeholder="Driver Name"
+                  value={driverName}
+                  onChange={(e) => setDriverName(e.target.value)}
+                />
+                <input
+                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-emerald-500 outline-none"
+                  placeholder="Driver Mobile (91xxxx)"
+                  value={driverMobile}
+                  onChange={(e) => setDriverMobile(e.target.value)}
+                />
+                <input
+                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-emerald-500 outline-none"
+                  placeholder="Vehicle Number (e.g. DL 1S AB 1234)"
+                  value={vehicleNumber}
+                  onChange={(e) => setVehicleNumber(e.target.value)}
                 />
               </div>
               <button
