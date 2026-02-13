@@ -143,13 +143,13 @@ export default function Track() {
 
   return (
     <div className="flex flex-col h-screen bg-gray-950 text-white font-sans overflow-hidden">
-      {/* HEADER */}
-      <div className="p-4 bg-gray-900/80 backdrop-blur-lg border-b border-gray-800 flex justify-between items-center shadow-lg z-20">
-        <div className="flex items-center gap-3">
-          <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-black text-sm ${role === 'driver' ? 'bg-blue-600' : 'bg-emerald-600'}`}>
+      {/* HEADER - Compact for Mobile */}
+      <div className="p-3 md:p-4 bg-gray-900/80 backdrop-blur-2xl border-b border-white/5 flex justify-between items-center shadow-2xl z-20">
+        <div className="flex items-center gap-2.5">
+          <div className={`w-7 h-7 md:w-8 md:h-8 rounded-lg flex items-center justify-center font-black text-[10px] md:text-sm ${role === 'driver' ? 'bg-blue-600 shadow-[0_0_15px_rgba(37,99,235,0.3)]' : 'bg-emerald-600 shadow-[0_0_15px_rgba(16,185,129,0.3)]'}`}>
             {role === 'driver' ? 'D' : 'P'}
           </div>
-          <h1 className="text-md font-bold truncate max-w-[150px]">
+          <h1 className="text-xs md:text-md font-black tracking-tight uppercase opacity-90">
             {role === 'driver' ? 'Driver Console' : 'Safe Tracking'}
           </h1>
         </div>
@@ -245,34 +245,39 @@ export default function Track() {
                 </div>
               </div>
 
-              {/* BOTTOM DETAILS SECTION (Flat & Compact) */}
-              <div className="p-3 md:p-4 bg-gray-950/80 backdrop-blur-3xl border-t border-white/5 z-20 relative">
+              {/* BOTTOM DETAILS SECTION (Premium Bottom Sheet Style) */}
+              <div className="p-4 md:p-5 bg-gray-950/90 backdrop-blur-3xl border-t border-white/10 z-20 relative rounded-t-[2.5rem] md:rounded-t-none shadow-[0_-15px_40px_rgba(0,0,0,0.5)]">
+                {/* Mobile Handle */}
+                <div className="w-12 h-1 bg-white/10 rounded-full mx-auto mb-4 md:hidden"></div>
+
                 <div className="flex items-center justify-between gap-4">
-                  <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 md:w-12 md:h-12 rounded-lg bg-indigo-600/10 flex items-center justify-center text-xl shadow-inner border border-white/5">
+                  <div className="flex items-center gap-3 md:gap-4">
+                    <div className="w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-gradient-to-br from-indigo-500/20 to-purple-500/20 flex items-center justify-center text-xl md:text-2xl shadow-inner border border-white/5 ring-1 ring-white/5">
                       {role === 'driver' ? '👤' : '👨‍✈️'}
                     </div>
                     <div className="min-w-0">
-                      <div className="text-[8px] text-gray-500 font-bold uppercase tracking-[0.2em] mb-0.5 opacity-50">
-                        {role === 'driver' ? 'Passenger Details' : 'Driver & Vehicle'}
-                      </div>
-                      <div className="text-sm md:text-base font-black text-white flex items-center gap-2 truncate">
-                        {role === 'driver' ? (userData?.name || "Passenger") : (userData?.driverName || "Driver Not Assigned")}
-                        <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-blue-500/10 border border-blue-500/20 ml-2">
-                          <span className="text-[10px] font-black text-blue-400">{distanceInfo.distance}</span>
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-[7px] md:text-[8px] text-gray-400 font-black uppercase tracking-[0.25em] opacity-60">
+                          {role === 'driver' ? 'Passenger' : 'Driver Partner'}
+                        </span>
+                        <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-blue-500/10 border border-blue-500/20">
+                          <span className="text-[8px] md:text-[9px] font-black text-blue-400">{distanceInfo.distance}</span>
                         </div>
                       </div>
-                      <div className="flex flex-col gap-1 mt-1">
-                        <div className="flex items-center gap-2">
+                      <div className="text-base md:text-xl font-black text-white leading-tight truncate">
+                        {role === 'driver' ? (userData?.name || "Passenger") : (userData?.driverName || "Driver Not Assigned")}
+                      </div>
+                      <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1.5">
+                        <div className="flex items-center gap-1.5">
                           <span className="text-[10px] opacity-40">📞</span>
-                          <span className="text-[11px] font-bold text-indigo-300">
+                          <span className="text-[10px] md:text-[11px] font-bold text-indigo-300/80">
                             {role === 'driver' ? (userData?.mobile || "No Number") : (userData?.driverMobile || "No Number")}
                           </span>
                         </div>
                         {role !== 'driver' && (
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-1.5">
                             <span className="text-[10px] opacity-40">🚗</span>
-                            <span className="text-[11px] font-bold text-indigo-400 opacity-80">
+                            <span className="text-[10px] md:text-[11px] font-black text-white/50 tracking-wider">
                               {userData?.vehicleNumber || "No Vehicle Number"}
                             </span>
                           </div>
@@ -283,20 +288,21 @@ export default function Track() {
 
                   <div className="flex items-center gap-3">
                     {/* Desktop-only status indicator in bottom bar */}
-                    <div className="hidden lg:flex items-center gap-3 px-3 h-10 bg-white/5 rounded-lg border border-white/5">
-                      <div className="flex items-center gap-1.5">
-                        <div className={`w-1.5 h-1.5 rounded-full ${tracking ? 'bg-emerald-500' : 'bg-red-500'}`}></div>
-                        <span className="text-[9px] font-bold text-gray-400 uppercase tracking-tighter">{status}</span>
+                    <div className="hidden lg:flex items-center gap-3 px-4 h-11 bg-white/5 rounded-xl border border-white/5 shadow-inner">
+                      <div className="flex items-center gap-2">
+                        <div className={`w-2 h-2 rounded-full ${tracking ? 'bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]' : 'bg-red-500'}`}></div>
+                        <span className="text-[9px] font-black text-gray-300 uppercase tracking-widest leading-none">{status}</span>
                       </div>
-                      <div className="w-px h-3 bg-white/10"></div>
-                      <div className="text-[9px] font-mono text-indigo-300 opacity-60">#{userData?.token?.slice(0, 8)}</div>
+                      <div className="w-px h-4 bg-white/10 mx-1"></div>
+                      <div className="text-[9px] font-mono text-indigo-300 opacity-40">#{userData?.token?.slice(0, 8)}</div>
                     </div>
 
                     <a
                       href={`tel:${role === 'driver' ? userData?.mobile : userData?.driverMobile}`}
-                      className="px-4 h-10 bg-gradient-to-br from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 flex items-center justify-center gap-2 rounded-lg shadow-lg shadow-emerald-500/10 active:scale-95 transition-all text-white font-black text-[10px] uppercase tracking-wider"
+                      className="w-12 h-12 md:w-auto md:px-6 md:h-12 bg-gradient-to-br from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 flex items-center justify-center gap-2 rounded-2xl shadow-xl shadow-emerald-500/20 active:scale-95 transition-all text-white font-black text-sm uppercase tracking-wider group"
                     >
-                      Call {role === 'driver' ? 'Passenger' : 'Driver'}
+                      <span className="text-xl md:text-base">📞</span>
+                      <span className="hidden md:inline text-[11px]">Call Partner</span>
                     </a>
                   </div>
                 </div>

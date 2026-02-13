@@ -14,6 +14,8 @@ export default function Admin() {
 
   const sourceRef = useRef(null);
   const destRef = useRef(null);
+  const sourceAutocomplete = useRef(null);
+  const destAutocomplete = useRef(null);
   const [source, setSource] = useState(null);
   const [destination, setDestination] = useState(null);
 
@@ -41,26 +43,43 @@ export default function Admin() {
   }, []);
 
   useEffect(() => {
-    // Initialize Autocomplete
-    if (window.google && activeTab === "create") {
-      const srcAutocomplete = new google.maps.places.Autocomplete(sourceRef.current);
-      srcAutocomplete.addListener("place_changed", () => {
-        const place = srcAutocomplete.getPlace();
-        if (place.geometry) {
-          setSource({ lat: place.geometry.location.lat(), lng: place.geometry.location.lng() });
-          setSourceText(place.formatted_address);
-        }
-      });
+    // Initialize Autocomplete once if Ref exists and Tab is Create
+    if (window.google && activeTab === "create" && sourceRef.current && destRef.current) {
+      // Prevent double initialization
+      if (!sourceAutocomplete.current) {
+        sourceAutocomplete.current = new google.maps.places.Autocomplete(sourceRef.current);
+        sourceAutocomplete.current.addListener("place_changed", () => {
+          const place = sourceAutocomplete.current.getPlace();
+          if (place.geometry) {
+            setSource({ lat: place.geometry.location.lat(), lng: place.geometry.location.lng() });
+            setSourceText(place.formatted_address);
+          }
+        });
+      }
 
-      const dstAutocomplete = new google.maps.places.Autocomplete(destRef.current);
-      dstAutocomplete.addListener("place_changed", () => {
-        const place = dstAutocomplete.getPlace();
-        if (place.geometry) {
-          setDestination({ lat: place.geometry.location.lat(), lng: place.geometry.location.lng() });
-          setDestText(place.formatted_address);
-        }
-      });
+      if (!destAutocomplete.current) {
+        destAutocomplete.current = new google.maps.places.Autocomplete(destRef.current);
+        destAutocomplete.current.addListener("place_changed", () => {
+          const place = destAutocomplete.current.getPlace();
+          if (place.geometry) {
+            setDestination({ lat: place.geometry.location.lat(), lng: place.geometry.location.lng() });
+            setDestText(place.formatted_address);
+          }
+        });
+      }
     }
+
+    // Cleanup when component unmounts or tab changes
+    return () => {
+      if (sourceAutocomplete.current) {
+        google.maps.event.clearInstanceListeners(sourceAutocomplete.current);
+        sourceAutocomplete.current = null;
+      }
+      if (destAutocomplete.current) {
+        google.maps.event.clearInstanceListeners(destAutocomplete.current);
+        destAutocomplete.current = null;
+      }
+    };
   }, [activeTab]);
 
   const fetchUsers = async () => {
@@ -82,8 +101,35 @@ export default function Admin() {
   };
 
   const createUser = async () => {
-    if (!name || !mobile || !source || !destination || !driverName || !driverMobile || !vehicleNumber) {
-      alert("Please fill all details and select locations from hints");
+    // 1. Check basic fields
+    if (!name || !mobile || !driverName || !driverMobile || !vehicleNumber || !sourceText || !destText) {
+      alert("Please fill all required details");
+      return;
+    }
+
+    // 2. Helper to get coordinates (Either from state or by GeoCoding)
+    const resolveLocation = async (text, currentCoords) => {
+      if (currentCoords) return currentCoords;
+
+      return new Promise((resolve) => {
+        const geocoder = new google.maps.Geocoder();
+        geocoder.geocode({ address: text }, (results, status) => {
+          if (status === "OK") {
+            const loc = results[0].geometry.location;
+            resolve({ lat: loc.lat(), lng: loc.lng() });
+          } else {
+            resolve(null);
+          }
+        });
+      });
+    };
+
+    // 3. Resolve source and destination
+    const resolvedSource = await resolveLocation(sourceText, source);
+    const resolvedDest = await resolveLocation(destText, destination);
+
+    if (!resolvedSource || !resolvedDest) {
+      alert("Could not find coordinates for the addresses. Please select from the dropdown hints.");
       return;
     }
 
@@ -93,11 +139,11 @@ export default function Admin() {
       body: JSON.stringify({
         name,
         mobile,
-        sourceLat: source.lat,
-        sourceLng: source.lng,
+        sourceLat: resolvedSource.lat,
+        sourceLng: resolvedSource.lng,
         sourceAddress: sourceText,
-        destLat: destination.lat,
-        destLng: destination.lng,
+        destLat: resolvedDest.lat,
+        destLng: resolvedDest.lng,
         destAddress: destText,
         driverName,
         driverMobile,
