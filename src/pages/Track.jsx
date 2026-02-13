@@ -68,6 +68,26 @@ export default function Track() {
     setStatus("Searching for GPS...");
     socket.connect();
 
+    if (!navigator.geolocation) return;
+
+    // 1. Get immediate first position and broadcast it
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const firstPos = {
+          token,
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+          speed: position.coords.speed || 0,
+          gpsStatus: "ON"
+        };
+        socket.emit("send-location", firstPos);
+        setPos({ lat: firstPos.lat, lng: firstPos.lng }); // Local update
+      },
+      (err) => console.error("Initial GPS error:", err),
+      { enableHighAccuracy: true }
+    );
+
+    // 2. Start continuous watch
     watchIdRef.current = navigator.geolocation.watchPosition(
       (position) => {
         const { latitude: lat, longitude: lng, speed: s } = position.coords;
@@ -114,61 +134,118 @@ export default function Track() {
         )}
       </div>
 
-      {/* MAIN CONTENT AREA: SIDEBAR + MAP */}
-      <div className="flex-1 flex flex-col md:flex-row overflow-hidden relative bg-gray-950">
+      {/* MAIN CONTENT AREA: Full-Height Sidebar + Right Panel (Map & Bottom) */}
+      <div className="flex-1 flex overflow-hidden bg-gray-950">
         {userData ? (
           <>
-            {/* JOURNEY SIDEBAR (LEFT) - Covers full height on desktop */}
-            <div className="hidden md:flex w-72 h-full flex-col bg-gray-900/30 backdrop-blur-3xl border-r border-white/5 p-8 shrink-0 z-10 transition-all duration-500">
-              <div className="flex flex-col gap-10 relative h-full">
-                <div className="pb-6 border-b border-white/5">
-                  <h3 className="text-xs font-bold text-gray-500 uppercase tracking-[0.3em] mb-3 opacity-50">Journey Roadmap</h3>
-                  <div className="bg-indigo-500/10 inline-block px-2 py-1 rounded text-[9px] font-mono text-indigo-400 border border-indigo-500/20">
+            {/* JOURNEY SIDEBAR (LEFT) - Full Height */}
+            <div className="hidden md:flex w-72 h-full flex-col bg-gray-900/30 backdrop-blur-3xl border-r border-white/5 p-6 shrink-0 z-10">
+              <div className="flex flex-col gap-8 relative h-full">
+                <div className="pb-4 border-b border-white/5">
+                  <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.3em] mb-2 opacity-50">Journey Roadmap</h3>
+                  <div className="bg-indigo-500/10 inline-block px-2 py-0.5 rounded text-[9px] font-mono text-indigo-400 border border-indigo-500/20">
                     ID: {userData.token.slice(0, 8)}
                   </div>
                 </div>
 
-                <div className="flex flex-col gap-12 relative px-1">
-                  <div className="absolute left-[11px] top-10 bottom-10 w-[2px] bg-gradient-to-b from-blue-500 via-gray-800 to-emerald-500 border-l border-dashed border-gray-700"></div>
+                <div className="flex flex-col gap-10 relative px-1">
+                  <div className="absolute left-[11px] top-8 bottom-8 w-[1px] bg-gradient-to-b from-blue-500 via-gray-800 to-emerald-500 border-l border-dashed border-gray-700"></div>
 
-                  <div className="flex gap-5 relative z-10 group">
-                    <div className="w-6 h-6 rounded-full bg-blue-600 border-[3px] border-gray-950 shadow-[0_0_20px_rgba(37,99,235,0.4)] flex-shrink-0 mt-0.5 group-hover:scale-110 transition-transform"></div>
+                  <div className="flex gap-4 relative z-10">
+                    <div className="w-5 h-5 rounded-full bg-blue-600 border-[3px] border-gray-950 shadow-[0_0_15px_rgba(37,99,235,0.4)] flex-shrink-0 mt-0.5"></div>
                     <div>
-                      <div className="text-[10px] text-blue-400 font-bold uppercase tracking-[0.2em] mb-2 opacity-70">Pickup Point</div>
-                      <div className="text-sm font-semibold text-gray-100 leading-snug">
+                      <div className="text-[8px] text-blue-400 font-bold uppercase tracking-[0.2em] mb-1 opacity-70">Pickup</div>
+                      <div className="text-xs font-semibold text-gray-200 leading-snug">
                         {userData.sourceAddress || "Location pending..."}
                       </div>
                     </div>
                   </div>
 
-                  <div className="flex gap-5 relative z-10 group">
-                    <div className="w-6 h-6 rounded-full bg-emerald-600 border-[3px] border-gray-950 shadow-[0_0_20px_rgba(16,185,129,0.4)] flex-shrink-0 mt-0.5 group-hover:scale-110 transition-transform"></div>
+                  <div className="flex gap-4 relative z-10">
+                    <div className="w-5 h-5 rounded-full bg-emerald-600 border-[3px] border-gray-950 shadow-[0_0_15px_rgba(16,185,129,0.4)] flex-shrink-0 mt-0.5"></div>
                     <div>
-                      <div className="text-[10px] text-emerald-400 font-bold uppercase tracking-[0.2em] mb-2 opacity-70">Drop-off Point</div>
-                      <div className="text-sm font-semibold text-gray-100 leading-snug">
+                      <div className="text-[8px] text-emerald-400 font-bold uppercase tracking-[0.2em] mb-1 opacity-70">Drop-off</div>
+                      <div className="text-xs font-semibold text-gray-200 leading-snug">
                         {userData.destAddress || "Destination pending..."}
                       </div>
                     </div>
                   </div>
                 </div>
 
-                <div className="mt-auto py-8 text-center border-t border-white/5">
-                  <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10">
+                <div className="mt-auto py-6 text-center border-t border-white/5">
+                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10">
                     <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_5px_rgba(16,185,129,0.8)]"></div>
-                    <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Signal Locked</span>
+                    <span className="text-[8px] font-bold text-gray-400 uppercase tracking-widest">Signal Locked</span>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* MAP SECTION - Takes remaining space */}
-            <div className="flex-1 h-full relative bg-gray-900 overflow-hidden">
-              <Map
-                locations={pos ? { [userData.token]: pos } : {}}
-                selectedUser={userData}
-                source={userData.source}
-                destination={userData.destination}
-              />
+            {/* RIGHT PANEL: Map (Top) & Bottom Details (Bottom) */}
+            <div className="flex-1 flex flex-col h-full relative overflow-hidden">
+              {/* MAP SECTION */}
+              <div className="flex-1 min-h-0 relative bg-gray-900 h-full">
+                <Map
+                  locations={pos ? { [userData.token]: pos } : {}}
+                  selectedUser={userData}
+                  source={userData.source}
+                  destination={userData.destination}
+                />
+              </div>
+
+              {/* BOTTOM DETAILS SECTION (Flat & Compact) */}
+              <div className="p-3 md:p-4 bg-gray-950/80 backdrop-blur-3xl border-t border-white/5 z-20 relative">
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 md:w-12 md:h-12 rounded-lg bg-indigo-600/10 flex items-center justify-center text-xl shadow-inner border border-white/5">
+                      {role === 'driver' ? '👤' : '👨‍✈️'}
+                    </div>
+                    <div className="min-w-0">
+                      <div className="text-[8px] text-gray-500 font-bold uppercase tracking-[0.2em] mb-0.5 opacity-50">
+                        {role === 'driver' ? 'Passenger Details' : 'Driver & Vehicle'}
+                      </div>
+                      <div className="text-sm md:text-base font-black text-white flex items-center gap-2 truncate">
+                        {role === 'driver' ? (userData?.name || "Passenger") : (userData?.driverName || "Driver Not Assigned")}
+                      </div>
+                      <div className="flex flex-col gap-1 mt-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] opacity-40">📞</span>
+                          <span className="text-[11px] font-bold text-indigo-300">
+                            {role === 'driver' ? (userData?.mobile || "No Number") : (userData?.driverMobile || "No Number")}
+                          </span>
+                        </div>
+                        {role !== 'driver' && (
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] opacity-40">🚗</span>
+                            <span className="text-[11px] font-bold text-indigo-400 opacity-80">
+                              {userData?.vehicleNumber || "No Vehicle Number"}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    {/* Desktop-only status indicator in bottom bar */}
+                    <div className="hidden lg:flex items-center gap-3 px-3 h-10 bg-white/5 rounded-lg border border-white/5">
+                      <div className="flex items-center gap-1.5">
+                        <div className={`w-1.5 h-1.5 rounded-full ${tracking ? 'bg-emerald-500' : 'bg-red-500'}`}></div>
+                        <span className="text-[9px] font-bold text-gray-400 uppercase tracking-tighter">{status}</span>
+                      </div>
+                      <div className="w-px h-3 bg-white/10"></div>
+                      <div className="text-[9px] font-mono text-indigo-300 opacity-60">#{userData?.token?.slice(0, 8)}</div>
+                    </div>
+
+                    <a
+                      href={`tel:${role === 'driver' ? userData?.mobile : userData?.driverMobile}`}
+                      className="px-4 h-10 bg-gradient-to-br from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 flex items-center justify-center gap-2 rounded-lg shadow-lg shadow-emerald-500/10 active:scale-95 transition-all text-white font-black text-[10px] uppercase tracking-wider"
+                    >
+                      Call {role === 'driver' ? 'Passenger' : 'Driver'}
+                    </a>
+                  </div>
+                </div>
+              </div>
             </div>
           </>
         ) : (
@@ -194,58 +271,6 @@ export default function Track() {
           </div>
         )}
       </div>
-
-      {/* BOTTOM DETAILS SECTION (Flat & Compact) */}
-      {userData && (
-        <div className="p-3 md:p-4 bg-gray-900/40 backdrop-blur-3xl border-t border-white/5 rounded-tr-none shadow-[0_-20px_50px_rgba(0,0,0,0.7)] z-20 ring-1 ring-white/10 relative">
-          <div className="absolute top-0 left-0 w-72 h-[1px] bg-gray-900/40 -translate-y-full md:block hidden"></div>
-
-          <div className="flex items-center justify-between gap-4 mt-1">
-            <div className="flex items-center gap-4">
-              <div className="w-10 h-10 md:w-12 md:h-12 rounded-lg bg-indigo-600/10 flex items-center justify-center text-xl shadow-inner border border-white/5">
-                {role === 'driver' ? '👤' : '👨‍✈️'}
-              </div>
-              <div className="min-w-0">
-                <div className="text-[8px] text-gray-500 font-bold uppercase tracking-[0.2em] mb-0.5 opacity-50">
-                  {role === 'driver' ? 'Passenger Details' : 'Driver & Vehicle'}
-                </div>
-                <div className="text-sm md:text-base font-black text-white flex items-center gap-2 truncate">
-                  {role === 'driver' ? (userData?.name || "Passenger") : (userData?.driverName || "Driver Not Assigned")}
-                </div>
-                <div className="text-[10px] text-indigo-400 font-bold truncate">
-                  {role === 'driver' ? (userData?.mobile || "No Number") : `${userData?.driverMobile || "No Number"} • ${userData?.vehicleNumber || "No Vehicle"}`}
-                </div>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3">
-              <div className="hidden lg:flex items-center gap-3 px-3 h-10 bg-white/5 rounded-lg border border-white/5">
-                <div className="flex items-center gap-1.5">
-                  <div className={`w-1.5 h-1.5 rounded-full ${tracking ? 'bg-emerald-500' : 'bg-red-500'}`}></div>
-                  <span className="text-[9px] font-bold text-gray-400 uppercase tracking-tighter">{status}</span>
-                </div>
-                <div className="w-px h-3 bg-white/10"></div>
-                <div className="text-[9px] font-mono text-indigo-300 opacity-60">#{userData?.token?.slice(0, 8)}</div>
-              </div>
-
-              <a
-                href={`tel:${role === 'driver' ? userData?.mobile : userData?.driverMobile}`}
-                className="px-4 h-10 bg-gradient-to-br from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 flex items-center justify-center gap-2 rounded-lg shadow-lg shadow-emerald-500/10 active:scale-95 transition-all text-white font-black text-[10px] uppercase tracking-wider"
-              >
-                Call {role === 'driver' ? 'Passenger' : 'Driver'}
-              </a>
-            </div>
-          </div>
-
-          <div className="flex lg:hidden items-center justify-between mt-3 pt-3 border-t border-white/5">
-            <div className="flex items-center gap-2">
-              <div className={`w-1.5 h-1.5 rounded-full ${tracking ? 'bg-emerald-500' : 'bg-red-500'}`}></div>
-              <span className="text-[8px] font-bold text-gray-500 uppercase tracking-widest">{status}</span>
-            </div>
-            <div className="text-[8px] font-mono text-gray-600">ID: {userData?.token?.slice(0, 12)}...</div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
