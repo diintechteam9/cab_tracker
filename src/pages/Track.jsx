@@ -7,9 +7,12 @@ export default function Track() {
   const [tracking, setTracking] = useState(false);
   const [status, setStatus] = useState("Initializing...");
   const [pos, setPos] = useState(null);
+  const [passengerPos, setPassengerPos] = useState(null);
   const [speed, setSpeed] = useState(0);
   const [userData, setUserData] = useState(null);
+  const [recenterFlag, setRecenterFlag] = useState(0);
   const watchIdRef = useRef(null);
+  const passengerWatchIdRef = useRef(null);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -39,6 +42,7 @@ export default function Track() {
 
     return () => {
       if (watchIdRef.current) navigator.geolocation.clearWatch(watchIdRef.current);
+      if (passengerWatchIdRef.current) navigator.geolocation.clearWatch(passengerWatchIdRef.current);
       socket.disconnect();
     };
   }, []);
@@ -56,6 +60,24 @@ export default function Track() {
         setTracking(true);
       }
     });
+
+    // Track passenger's own location
+    if (navigator.geolocation) {
+      passengerWatchIdRef.current = navigator.geolocation.watchPosition(
+        (position) => {
+          setPassengerPos({
+            lat: position.coords.latitude,
+            lng: position.coords.longitude
+          });
+        },
+        (err) => console.error("Passenger GPS error:", err),
+        { enableHighAccuracy: true }
+      );
+    }
+  };
+
+  const handleRecenter = () => {
+    setRecenterFlag(prev => prev + 1);
   };
 
   const startTracking = () => {
@@ -190,7 +212,25 @@ export default function Track() {
                   selectedUser={userData}
                   source={userData.source}
                   destination={userData.destination}
+                  passengerPos={passengerPos}
+                  recenterFlag={recenterFlag}
                 />
+
+                {/* FLOATING ACTION BUTTONS */}
+                <div className="absolute top-4 right-4 flex flex-col gap-3 z-30">
+                  <button
+                    onClick={handleRecenter}
+                    className="w-10 h-10 rounded-full bg-gray-900/80 backdrop-blur-md border border-white/10 flex items-center justify-center text-white shadow-lg hover:bg-gray-800 transition-colors"
+                    title="Recenter on Driver"
+                  >
+                    <span className="text-lg">🎯</span>
+                  </button>
+                  {passengerPos && (
+                    <div className="w-10 h-10 rounded-full bg-emerald-500/80 backdrop-blur-md border border-white/10 flex items-center justify-center text-white shadow-lg cursor-default">
+                      <span className="text-xs font-bold">ME</span>
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* BOTTOM DETAILS SECTION (Flat & Compact) */}

@@ -36,14 +36,16 @@ const getBearing = (from, to) => {
   return (brng + 360) % 360;
 };
 
-export default function Map({ locations, selectedUser, source, destination, onDirectionsUpdate }) {
+export default function Map({ locations, selectedUser, source, destination, onDirectionsUpdate, passengerPos, recenterFlag }) {
   const mapRef = useRef(null);
   const liveMarkers = useRef({});
   const pulseMarkers = useRef({});
+  const passengerMarker = useRef(null);
   const prevLocations = useRef({});
   const sourceMarker = useRef(null);
   const destMarker = useRef(null);
   const directionsRenderer = useRef(null);
+  const isFirstLoad = useRef(true);
 
   useEffect(() => {
     if (!window.google) return;
@@ -220,6 +222,45 @@ export default function Map({ locations, selectedUser, source, destination, onDi
       else destMarker.current.setPosition(destination);
     }
   }, [source, destination]);
+
+  // Passenger's Own Location Marker
+  useEffect(() => {
+    if (passengerPos && mapRef.current) {
+      if (!passengerMarker.current) {
+        passengerMarker.current = new google.maps.Marker({
+          map: mapRef.current,
+          position: passengerPos,
+          icon: {
+            path: google.maps.SymbolPath.CIRCLE,
+            scale: 8,
+            fillColor: "#3b82f6",
+            fillOpacity: 1,
+            strokeWeight: 4,
+            strokeColor: "#ffffff",
+          },
+          title: "My Location",
+          zIndex: 20
+        });
+      } else {
+        passengerMarker.current.setPosition(passengerPos);
+      }
+    }
+  }, [passengerPos]);
+
+  // Recenter Logic
+  useEffect(() => {
+    if (recenterFlag > 0 && mapRef.current) {
+      // Find the first active driver location to recenter on
+      const driverTokens = Object.keys(locations);
+      if (driverTokens.length > 0) {
+        mapRef.current.panTo(locations[driverTokens[0]]);
+        mapRef.current.setZoom(18);
+      } else if (passengerPos) {
+        mapRef.current.panTo(passengerPos);
+        mapRef.current.setZoom(18);
+      }
+    }
+  }, [recenterFlag]);
 
   return <div id="map" className="h-full w-full bg-[#0e1626]" />;
 }
