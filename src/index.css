@@ -4,9 +4,85 @@
   --color-brand-mint: #22c55e;
   --color-brand-dark: #1e293b;
   --color-fleet-bg: #f8fafc;
+
+  /* Stitch UI Colors */
+  --color-primary: #2bee8c;
+  --color-primary-dark: #25cf79;
+  --color-background-light: #f6f8f7;
+  --color-background-dark: #102219;
+  --color-surface-light: #ffffff;
+  --color-surface-dark: #183325;
+  --color-neutral-light: #e2e8e5;
+  --color-neutral-dark: #2a4035;
 }
 
-body {
-  @apply bg-fleet-bg text-slate-800 antialiased;
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+@layer utilities {
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
+
+/* Pulse Animation for Live Tracking */
+@keyframes pulse-ring {
+  0% {
+    transform: scale(.33);
+  }
+
+  80%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes pulse-dot {
+  0% {
+    transform: scale(.8);
+  }
+
+  50% {
+    transform: scale(1);
+  }
+
+  100% {
+    transform: scale(.8);
+  }
+}
+
+.pulsating-circle {
+  position: relative;
+  width: 20px;
+  height: 20px;
+}
+
+.pulsating-circle:before {
+  content: '';
+  position: absolute;
+  display: block;
+  width: 300%;
+  height: 300%;
+  box-sizing: border-box;
+  margin-left: -100%;
+  margin-top: -100%;
+  border-radius: 45px;
+  background-color: #2bee8c;
+  animation: pulse-ring 1.25s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+}
+
+.pulsating-circle:after {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  background-color: white;
+  border-radius: 15px;
+  box-shadow: 0 0 8px rgba(0, 0, 0, .3);
+  animation: pulse-dot 1.25s cubic-bezier(0.455, 0.03, 0.515, 0.955) -.4s infinite;
 }

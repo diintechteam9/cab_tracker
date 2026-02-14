@@ -36,8 +36,9 @@ const getBearing = (from, to) => {
   return (brng + 360) % 360;
 };
 
-export default function Map({ locations, selectedUser, source, destination, onDirectionsUpdate, passengerPos, recenterFlag }) {
-  const mapRef = useRef(null);
+export default function Map({ locations, selectedUser, source, destination, onDirectionsUpdate, passengerPos, recenterFlag, historyPath, showRoutePreview }) {
+  const mapContainerRef = useRef(null); // Ref for the DIV
+  const mapRef = useRef(null); // Ref for Google Map Instance
   const liveMarkers = useRef({});
   const pulseMarkers = useRef({});
   const passengerMarker = useRef(null);
@@ -45,48 +46,104 @@ export default function Map({ locations, selectedUser, source, destination, onDi
   const sourceMarker = useRef(null);
   const destMarker = useRef(null);
   const directionsRenderer = useRef(null);
-  const isFirstLoad = useRef(true);
+  const historyPolyline = useRef(null);
+  const previewDirectionsRenderer = useRef(null); // Separate renderer for modal preview
 
   useEffect(() => {
-    if (!window.google) return;
+    const initMap = () => {
+      if (!window.google || !window.google.maps) return false;
+      if (!mapContainerRef.current) return false;
+      if (mapRef.current) return true;
 
-    mapRef.current = new google.maps.Map(document.getElementById("map"), {
-      zoom: 16,
-      center: { lat: 28.6139, lng: 77.209 },
-      tilt: 45,
-      mapId: "DEMO_MAP_ID",
-      mapTypeControl: false,
-      streetViewControl: false,
-      fullscreenControl: false,
-      styles: [
-        { elementType: "geometry", stylers: [{ color: "#242424" }] },
-        { elementType: "labels.text.fill", stylers: [{ color: "#747474" }] },
-        { elementType: "labels.text.stroke", stylers: [{ color: "#242424" }] },
-        { featureType: "administrative", elementType: "geometry.stroke", stylers: [{ color: "#333333" }] },
-        { featureType: "landscape.man_made", elementType: "geometry.fill", stylers: [{ color: "#2a2a2a" }] },
-        { featureType: "poi", elementType: "labels.text.fill", stylers: [{ color: "#8a8a8a" }] },
-        { featureType: "road", elementType: "geometry", stylers: [{ color: "#383838" }] },
-        { featureType: "road", elementType: "labels.text.fill", stylers: [{ color: "#959595" }] },
-        { featureType: "road.highway", elementType: "geometry", stylers: [{ color: "#454545" }] },
-        { featureType: "transit", elementType: "labels.text.fill", stylers: [{ color: "#666666" }] },
-        { featureType: "water", elementType: "geometry", stylers: [{ color: "#1a1a1a" }] }
-      ]
-    });
+      try {
+        mapRef.current = new google.maps.Map(mapContainerRef.current, {
+          mapId: "DEMO_MAP_ID", // Google's demo Map ID for testing
+          zoom: 16,
+          center: { lat: 28.6139, lng: 77.209 },
+          tilt: 45,
+          mapTypeControl: false,
+          streetViewControl: false,
+          fullscreenControl: false
+        });
 
-    directionsRenderer.current = new google.maps.DirectionsRenderer({
-      map: mapRef.current,
-      suppressMarkers: true,
-      polylineOptions: {
-        strokeColor: "#60a5fa",
-        strokeWeight: 6,
-        strokeOpacity: 0.6
+        directionsRenderer.current = new google.maps.DirectionsRenderer({
+          map: mapRef.current,
+          suppressMarkers: true,
+          polylineOptions: {
+            strokeColor: "#60a5fa",
+            strokeWeight: 6,
+            strokeOpacity: 0.6
+          }
+        });
+
+        previewDirectionsRenderer.current = new google.maps.DirectionsRenderer({
+          map: null, // Initially not attached
+          suppressMarkers: true,
+          polylineOptions: {
+            strokeColor: "#60a5fa", // Blue line for route preview
+            strokeWeight: 5,
+            strokeOpacity: 0.8
+          }
+        });
+
+        return true;
+      } catch (error) {
+        console.error("Map initialization error:", error);
+        return false;
       }
-    });
+    };
+
+    if (!initMap()) {
+      const intervalId = setInterval(() => {
+        if (initMap()) {
+          clearInterval(intervalId);
+        }
+      }, 100);
+    }
   }, []);
 
+  // History Path Renderer
+  useEffect(() => {
+    if (!mapRef.current) return;
+
+    if (historyPath && historyPath.length > 0) {
+      if (!historyPolyline.current) {
+        historyPolyline.current = new google.maps.Polyline({
+          path: historyPath,
+          geodesic: true,
+          strokeColor: "#f59e0b", // Amber/Orange for history
+          strokeOpacity: 0.8,
+          strokeWeight: 4,
+          icons: [{
+            icon: { path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW },
+            offset: "100%",
+            repeat: "50px"
+          }],
+          map: mapRef.current
+        });
+      } else {
+        historyPolyline.current.setPath(historyPath);
+        historyPolyline.current.setMap(mapRef.current);
+      }
+
+      // Fit bounds to history
+      const bounds = new google.maps.LatLngBounds();
+      historyPath.forEach(pt => bounds.extend(pt));
+      mapRef.current.fitBounds(bounds);
+
+    } else {
+      if (historyPolyline.current) {
+        historyPolyline.current.setMap(null);
+      }
+    }
+  }, [historyPath]);
+
+  // Effect to handle live marker updates 
   useEffect(() => {
     const updateMarkers = async () => {
-      if (!mapRef.current) return;
+      if (!mapRef.current || !window.google) return;
+
+      // Dynamic import inside effect to ensure library is loaded
       const { AdvancedMarkerElement } = await google.maps.importLibrary("marker");
 
       Object.entries(locations).forEach(([token, currentPos]) => {
@@ -117,9 +174,12 @@ export default function Map({ locations, selectedUser, source, destination, onDi
             if (pulseScale > 22) pulseDir = -1;
             if (pulseScale < 15) pulseDir = 1;
             const pm = pulseMarkers.current[token];
-            const icon = pm.getIcon();
-            pm.setIcon({ ...icon, scale: pulseScale, fillOpacity: 0.5 - (pulseScale - 15) / 20 });
-            requestAnimationFrame(animatePulse);
+            // Check if marker still exists/is valid
+            if (pm.getMap()) {
+              const icon = pm.getIcon();
+              pm.setIcon({ ...icon, scale: pulseScale, fillOpacity: 0.5 - (pulseScale - 15) / 20 });
+              requestAnimationFrame(animatePulse);
+            }
           };
           requestAnimationFrame(animatePulse);
 
@@ -143,6 +203,8 @@ export default function Map({ locations, selectedUser, source, destination, onDi
           const pulse = pulseMarkers.current[token];
           const carWrapper = marker.content.querySelector(".car-container");
 
+          if (!marker.map) marker.map = mapRef.current; // Re-attach if lost
+
           // Smooth Interpolation
           let start = null;
           const duration = 1000;
@@ -153,7 +215,7 @@ export default function Map({ locations, selectedUser, source, destination, onDi
             const lng = prevPos.lng + (currentPos.lng - prevPos.lng) * progress;
             const pos = { lat, lng };
 
-            marker.position = pos;
+            if (marker) marker.position = pos;
             if (pulse) pulse.setPosition(pos);
 
             if (progress === 0 && carWrapper) {
@@ -171,33 +233,75 @@ export default function Map({ locations, selectedUser, source, destination, onDi
     updateMarkers();
   }, [locations]);
 
-  // Directions
+  // Directions for selected user (live tracking)
   useEffect(() => {
-    if (selectedUser && mapRef.current) {
+    if (!directionsRenderer.current || !mapRef.current) return;
+
+    if (selectedUser && selectedUser.source && selectedUser.destination) {
       const directionsService = new google.maps.DirectionsService();
-      if (selectedUser.source && selectedUser.destination) {
-        directionsService.route(
-          {
-            origin: selectedUser.source,
-            destination: selectedUser.destination,
-            travelMode: google.maps.TravelMode.DRIVING,
-          },
-          (result, status) => {
-            if (status === google.maps.DirectionsStatus.OK) {
-              directionsRenderer.current.setDirections(result);
-              if (onDirectionsUpdate) {
-                const leg = result.routes[0].legs[0];
-                onDirectionsUpdate({ distance: leg.distance.text, duration: leg.duration.text });
-              }
+      directionsService.route(
+        {
+          origin: selectedUser.source,
+          destination: selectedUser.destination,
+          travelMode: google.maps.TravelMode.DRIVING,
+        },
+        (result, status) => {
+          if (status === google.maps.DirectionsStatus.OK) {
+            directionsRenderer.current.setDirections(result);
+            if (onDirectionsUpdate) {
+              const leg = result.routes[0].legs[0];
+              onDirectionsUpdate({ distance: leg.distance.text, duration: leg.duration.text });
             }
           }
-        );
-      }
+        }
+      );
+    } else {
+      // Clear directions when no user is selected
+      directionsRenderer.current.setDirections({ routes: [] });
     }
   }, [selectedUser]);
 
+  // Route Preview for Modal (when creating new journey)
+  useEffect(() => {
+    if (!previewDirectionsRenderer.current || !mapRef.current || !showRoutePreview) return;
+
+    if (source && destination) {
+      // Both source and destination available - show route with blue line
+      const directionsService = new google.maps.DirectionsService();
+      directionsService.route(
+        {
+          origin: source,
+          destination: destination,
+          travelMode: google.maps.TravelMode.DRIVING,
+        },
+        (result, status) => {
+          if (status === google.maps.DirectionsStatus.OK) {
+            previewDirectionsRenderer.current.setMap(mapRef.current);
+            previewDirectionsRenderer.current.setDirections(result);
+
+            // Fit bounds to show entire route
+            const bounds = new google.maps.LatLngBounds();
+            bounds.extend(source);
+            bounds.extend(destination);
+            mapRef.current.fitBounds(bounds);
+          }
+        }
+      );
+    } else if (source) {
+      // Only source available - center map on pickup location
+      previewDirectionsRenderer.current.setDirections({ routes: [] });
+      mapRef.current.panTo(source);
+      mapRef.current.setZoom(15);
+    } else {
+      // No locations - clear preview
+      previewDirectionsRenderer.current.setDirections({ routes: [] });
+    }
+  }, [source, destination, showRoutePreview]);
+
   // Source/Dest
   useEffect(() => {
+    if (!mapRef.current) return;
+
     const createMarker = (pos, color, label) => new google.maps.Marker({
       map: mapRef.current,
       position: pos,
@@ -262,5 +366,5 @@ export default function Map({ locations, selectedUser, source, destination, onDi
     }
   }, [recenterFlag]);
 
-  return <div id="map" className="h-full w-full bg-[#0e1626]" />;
+  return <div ref={mapContainerRef} className="absolute inset-0 w-full h-full bg-[#0e1626]" />;
 }
