@@ -12,6 +12,8 @@ export default function Track() {
   const [userData, setUserData] = useState(null);
   const [recenterFlag, setRecenterFlag] = useState(0);
   const [distanceInfo, setDistanceInfo] = useState({ distance: "...", duration: "..." });
+  const [otpInput, setOtpInput] = useState("");
+  const [isOtpVerified, setIsOtpVerified] = useState(false);
   const watchIdRef = useRef(null);
   const passengerWatchIdRef = useRef(null);
 
@@ -23,22 +25,29 @@ export default function Track() {
     console.log("🔍 Track.jsx Debug:", { urlRole, token });
     setRole(urlRole);
 
+    let cleanupPassengerMode = null;
+
     if (token) {
-      fetch(`${import.meta.env.VITE_BACKEND_URL}/api/admin/users`)
+      // Use the new endpoint to get full trip details (including OTP/Status)
+      fetch(`${import.meta.env.VITE_BACKEND_URL}/api/admin/trip/${token}`)
         .then(res => res.json())
-        .then(users => {
-          const user = users.find(u => u.token === token);
+        .then(user => {
           console.log("👤 User Data Found:", user);
           setUserData(user || null);
 
+          // Check if ride is already started or completed
+          if (user?.status === "STARTED") setIsOtpVerified(true);
+          if (user?.status === "COMPLETED") setStatus("Journey Completed ✅");
+
           if (urlRole === "passenger" && user) {
             setStatus("Awaiting driver's live GPS...");
-            startPassengerMode(token);
+            cleanupPassengerMode = startPassengerMode(token);
           } else {
             console.log("✅ Driver mode - Ready to start");
-            setStatus("Ready to start.");
+            setStatus("Ready to go online.");
           }
-        });
+        })
+        .catch(err => console.error("Error fetching trip:", err));
     }
 
     if ('wakeLock' in navigator) {
@@ -48,6 +57,7 @@ export default function Track() {
     return () => {
       if (watchIdRef.current) navigator.geolocation.clearWatch(watchIdRef.current);
       if (passengerWatchIdRef.current) navigator.geolocation.clearWatch(passengerWatchIdRef.current);
+      if (cleanupPassengerMode) cleanupPassengerMode();
       socket.disconnect();
     };
   }, []);
@@ -57,14 +67,40 @@ export default function Track() {
     socket.connect();
     socket.emit("join-track", token);
 
-    socket.on("location-update", (data) => {
+    const handleLocationUpdate = (data) => {
       if (data.token === token) {
         setPos({ lat: data.lat, lng: data.lng });
         setSpeed(data.speed);
-        setStatus("Live Tracking Active ✅");
+        if (userData?.status !== "COMPLETED") {
+          setStatus("Live Tracking Active ✅");
+        }
         setTracking(true);
       }
-    });
+    };
+
+    const handleRideStarted = () => {
+      setIsOtpVerified(true);
+      setStatus("🚀 Your Journey Has Started!");
+      // Refresh user data to update status
+      fetch(`${import.meta.env.VITE_BACKEND_URL}/api/admin/trip/${token}`)
+        .then(res => res.json())
+        .then(data => setUserData(data))
+        .catch(err => console.error("Error refreshing trip data:", err));
+    };
+
+    const handleRideCompleted = () => {
+      setStatus("✅ Your Journey Has Completed!");
+      setTracking(false);
+      // Refresh user data
+      fetch(`${import.meta.env.VITE_BACKEND_URL}/api/admin/trip/${token}`)
+        .then(res => res.json())
+        .then(data => setUserData(data))
+        .catch(err => console.error("Error refreshing trip data:", err));
+    };
+
+    socket.on("location-update", handleLocationUpdate);
+    socket.on("ride-started", handleRideStarted);
+    socket.on("ride-completed", handleRideCompleted);
 
     // Track passenger's own location
     if (navigator.geolocation) {
@@ -78,6 +114,65 @@ export default function Track() {
         (err) => console.error("Passenger GPS error:", err),
         { enableHighAccuracy: true }
       );
+    }
+
+    // Return cleanup function
+    return () => {
+      socket.off("location-update", handleLocationUpdate);
+      socket.off("ride-started", handleRideStarted);
+      socket.off("ride-completed", handleRideCompleted);
+    };
+  };
+
+  const verifyOTP = async () => {
+    if (!otpInput || otpInput.length !== 4) return alert("Please enter a valid 4-digit OTP");
+
+    // We need current location for startLocation
+    if (!pos) return alert("Waiting for GPS location...");
+
+    try {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/admin/verify-otp`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          token: userData.token,
+          otp: otpInput,
+          lat: pos.lat,
+          lng: pos.lng
+        })
+      });
+      const data = await response.json();
+      if (data.success) {
+        setIsOtpVerified(true);
+        setUserData(data.user); // Update local state
+        setStatus("🚀 Journey Started!");
+      } else {
+        alert(data.message || "OTP Verification Failed");
+      }
+    } catch (err) {
+      console.error("OTP Verify Error:", err);
+      alert("Failed to verify OTP");
+    }
+  };
+
+  const completeJourney = async () => {
+    if (!pos) return alert("Waiting for GPS location...");
+    if (!window.confirm("Are you sure you want to complete this trip?")) return;
+
+    try {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/admin/complete/${userData._id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ lat: pos.lat, lng: pos.lng })
+      });
+      const data = await response.json();
+      if (data.success) {
+        setUserData(data.user);
+        setStatus("✅ Journey Completed");
+        setTracking(false);
+      }
+    } catch (err) {
+      console.error("Complete Trip Error:", err);
     }
   };
 
@@ -126,7 +221,9 @@ export default function Track() {
 
         setPos({ lat, lng });
         setSpeed(currentSpeed);
-        setStatus("Sharing Location ✅");
+        if (!isOtpVerified) setStatus("Online - Waiting for Passenger");
+        else setStatus("Live Tracking Active ✅");
+
         setTracking(true);
 
         socket.emit("send-location", {
@@ -169,44 +266,105 @@ export default function Track() {
             </div>
 
             <div>
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white leading-tight">
-                {role === 'driver' ? (userData?.name || "Passenger") : (userData?.driverName || "Driver Assigned")}
+              <h2 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white leading-tight">
+                {role === 'driver' ? "Passenger" : userData?.driverName || "Driver Assigned"}
               </h2>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 font-medium">
-                {role === 'driver' ? "Passenger Details" : (userData?.vehicleNumber || "Vehicle Pending")}
-              </p>
-              <div className="flex items-center gap-2 mt-2">
-                <span className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-yellow-500/10 text-yellow-500 border border-yellow-500/20">
-                  <span className="material-icons text-[10px]">star</span> 4.9
-                </span>
-                <span className="text-[10px] text-gray-400 font-medium">• {distanceInfo.distance || "0 km"} away</span>
-              </div>
+              {/* OTP Display for Passenger */}
+              {role === 'passenger' && userData?.status === 'PENDING' && (
+                <div className="mt-1 bg-yellow-100 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-700/50 rounded-lg px-2 py-1 inline-block">
+                  <p className="text-[10px] sm:text-xs text-yellow-800 dark:text-yellow-200 font-bold">
+                    Start Code: <span className="text-sm sm:text-lg tracking-widest">{userData?.otp}</span>
+                  </p>
+                </div>
+              )}
+              {role === 'driver' && (
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 font-medium">
+                  {userData?.name} • {userData?.mobile}
+                </p>
+              )}
+              {role !== 'passenger' && role !== 'driver' && (
+                <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-1 font-medium">
+                  {userData?.vehicleNumber}
+                </p>
+              )}
             </div>
           </div>
 
           <div className="flex gap-2">
             <a
               href={`tel:${role === 'driver' ? userData?.mobile : userData?.driverMobile}`}
-              className="w-12 h-12 rounded-full bg-primary text-surface-dark hover:bg-primary-dark transition-all flex items-center justify-center shadow-lg shadow-primary/30 active:scale-95"
+              className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-primary text-surface-dark hover:bg-primary-dark transition-all flex items-center justify-center shadow-lg shadow-primary/30 active:scale-95"
             >
-              <span className="material-icons">call</span>
+              <span className="material-icons text-lg sm:text-xl">call</span>
             </a>
           </div>
         </div>
 
+        {/* Driver OTP Verification Box (When Online but not Started) */}
+        {role === 'driver' && tracking && !isOtpVerified && userData?.status !== 'COMPLETED' && (
+          <div className="mb-4 sm:mb-6 bg-white dark:bg-neutral-800 p-3 sm:p-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm animate-fade-in">
+            <label htmlFor="otp-input" className="text-[10px] sm:text-xs font-bold text-gray-500 uppercase tracking-wide mb-1 sm:mb-2 block">Ask Passenger for Start Code</label>
+            <div className="flex gap-2">
+              <input
+                id="otp-input"
+                name="otp"
+                type="tel"
+                maxLength={4}
+                value={otpInput}
+                onChange={(e) => setOtpInput(e.target.value)}
+                placeholder="0000"
+                className="flex-1 bg-gray-50 dark:bg-black/30 border border-gray-300 dark:border-gray-600 rounded-lg px-2 py-1.5 sm:px-4 sm:py-2 text-center text-lg sm:text-xl font-bold tracking-widest focus:ring-2 focus:ring-primary outline-none"
+              />
+              <button
+                onClick={verifyOTP}
+                className="bg-primary hover:bg-green-600 text-white text-xs sm:text-sm font-bold px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg shadow-lg active:scale-95 transition-all"
+              >
+                START
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Complete Journey Button for Driver */}
+        {role === 'driver' && isOtpVerified && userData?.status !== 'COMPLETED' && (
+          <div className="mb-4 sm:mb-6 animate-fade-in">
+            <button
+              onClick={completeJourney}
+              className="w-full bg-red-500 hover:bg-red-600 text-white text-sm sm:text-base font-bold py-2.5 sm:py-3 rounded-xl shadow-lg shadow-red-500/30 active:scale-95 transition-all flex items-center justify-center gap-2"
+            >
+              <span className="material-icons text-sm sm:text-base">flag</span>
+              COMPLETE RIDE
+            </button>
+          </div>
+        )}
+
+        {/* Status Banners */}
+        {userData?.status === "STARTED" && (
+          <div className="mb-4 bg-green-100 dark:bg-green-900/30 border border-green-200 dark:border-green-800 rounded-xl p-3 flex items-center gap-2 animate-fade-in">
+            <span className="material-icons text-green-600 dark:text-green-400">local_taxi</span>
+            <p className="text-sm text-green-800 dark:text-green-200 font-bold">Running - Trip in Progress</p>
+          </div>
+        )}
+        {userData?.status === "COMPLETED" && (
+          <div className="mb-4 bg-blue-100 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-xl p-3 flex items-center gap-2 animate-fade-in">
+            <span className="material-icons text-blue-600 dark:text-blue-400">check_circle</span>
+            <p className="text-sm text-blue-800 dark:text-blue-200 font-bold">Ride Completed Successfully</p>
+          </div>
+        )}
+
         {/* Metric Cards Grid */}
         <div className="grid grid-cols-3 gap-3">
-          <div className="bg-gray-50 dark:bg-black/20 p-3 rounded-2xl border border-gray-100 dark:border-white/5 flex flex-col items-center justify-center transition-colors hover:bg-gray-100 dark:hover:bg-white/5">
+          <div className="bg-gray-50 dark:bg-black/20 p-3 rounded-2xl border border-gray-100 dark:border-white/5 flex flex-col items-center justify-center transition-transform hover:scale-105 active:scale-95 animate-scale-in">
             <span className="material-symbols-outlined text-primary mb-1 text-xl">speed</span>
             <span className="text-lg font-bold text-gray-900 dark:text-white">{speed}</span>
             <span className="text-[10px] text-gray-500 uppercase font-bold tracking-wider">Speed</span>
           </div>
-          <div className="bg-gray-50 dark:bg-black/20 p-3 rounded-2xl border border-gray-100 dark:border-white/5 flex flex-col items-center justify-center transition-colors hover:bg-gray-100 dark:hover:bg-white/5">
+          <div className="bg-gray-50 dark:bg-black/20 p-3 rounded-2xl border border-gray-100 dark:border-white/5 flex flex-col items-center justify-center transition-transform hover:scale-105 active:scale-95 animate-scale-in delay-100">
             <span className="material-symbols-outlined text-blue-500 mb-1 text-xl">straighten</span>
             <span className="text-lg font-bold text-gray-900 dark:text-white">{distanceInfo.distance}</span>
             <span className="text-[10px] text-gray-500 uppercase font-bold tracking-wider">Dist</span>
           </div>
-          <div className="bg-gray-50 dark:bg-black/20 p-3 rounded-2xl border border-gray-100 dark:border-white/5 flex flex-col items-center justify-center transition-colors hover:bg-gray-100 dark:hover:bg-white/5">
+          <div className="bg-gray-50 dark:bg-black/20 p-3 rounded-2xl border border-gray-100 dark:border-white/5 flex flex-col items-center justify-center transition-transform hover:scale-105 active:scale-95 animate-scale-in delay-200">
             <span className="material-symbols-outlined text-orange-500 mb-1 text-xl">schedule</span>
             <span className="text-lg font-bold text-gray-900 dark:text-white">{distanceInfo.duration}</span>
             <span className="text-[10px] text-gray-500 uppercase font-bold tracking-wider">ETA</span>
@@ -229,7 +387,7 @@ export default function Track() {
               <div className="flex justify-between items-start">
                 <div>
                   <p className="text-[10px] text-primary font-bold uppercase mb-0.5">Current Status</p>
-                  <h4 className="text-sm font-bold text-gray-900 dark:text-white">{status}</h4>
+                  <h4 className="text-sm font-bold text-gray-900 dark:text-white">{userData?.status || status}</h4>
                 </div>
                 <span className="text-[10px] font-mono text-gray-400">NOW</span>
               </div>
@@ -262,7 +420,7 @@ export default function Track() {
   );
 
   return (
-    <div className="flex flex-col lg:flex-row h-screen bg-gray-100 dark:bg-black font-sans overflow-hidden">
+    <div className="flex flex-col lg:flex-row h-dvh bg-gray-100 dark:bg-black font-sans overflow-hidden">
 
       {/* 1. DESKTOP SIDEBAR (Visible on LG+) */}
       <div className="hidden lg:flex w-96 flex-col h-full bg-surface-light dark:bg-surface-dark border-r border-gray-200 dark:border-white/10 z-30 shadow-2xl">
@@ -326,7 +484,7 @@ export default function Track() {
       </div>
 
       {/* 3. MOBILE BOTTOM SHEET (Visible < LG) */}
-      <div className="lg:hidden flex-1 -mt-10 bg-surface-light dark:bg-surface-dark rounded-t-[2.5rem] shadow-[0_-10px_40px_rgba(0,0,0,0.3)] relative z-20 flex flex-col overflow-hidden border-t border-white/10">
+      <div className="lg:hidden flex-1 -mt-10 bg-surface-light dark:bg-surface-dark rounded-t-[2.5rem] shadow-[0_-10px_40px_rgba(0,0,0,0.3)] relative z-20 flex flex-col overflow-hidden border-t border-white/10 animate-slide-up">
         {/* Drag Handle */}
         <div className="w-full flex justify-center pt-3 pb-1 cursor-grab active:cursor-grabbing">
           <div className="w-12 h-1.5 bg-gray-300 dark:bg-neutral-600 rounded-full"></div>
@@ -340,13 +498,13 @@ export default function Track() {
         )}
       </div>
 
-      {/* DRIVER MODAL OVERLAY */}
+      {/* DRIVER START MODAL (GO ONLINE) */}
       {(() => {
-        const shouldShow = role === 'driver' && !tracking && userData;
+        const shouldShow = role === 'driver' && !tracking && !isOtpVerified && userData?.status !== "COMPLETED";
         return shouldShow;
       })() && (
-          <div className="absolute inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-4">
-            <div className="w-full max-w-sm bg-surface-light dark:bg-surface-dark rounded-[2rem] p-6 shadow-2xl border border-white/10 animate-in slide-in-from-bottom-10 fade-in duration-300">
+          <div className="absolute inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-4 animate-fade-in">
+            <div className="w-full max-w-sm bg-surface-light dark:bg-surface-dark rounded-[2rem] p-6 shadow-2xl border border-white/10 animate-scale-in">
               <div className="flex justify-center -mt-16 mb-4">
                 <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-primary to-green-600 flex items-center justify-center text-4xl shadow-xl shadow-primary/30 rotate-3">
                   🚀
@@ -355,7 +513,7 @@ export default function Track() {
 
               <div className="text-center mb-6">
                 <h2 className="text-xl font-bold text-gray-900 dark:text-white">Ready to Drive?</h2>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Start broadcasting your location</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Go online to reach pickup point</p>
               </div>
 
               <div className="space-y-4 mb-6">
@@ -364,13 +522,6 @@ export default function Track() {
                   <div>
                     <h4 className="text-xs font-bold text-gray-900 dark:text-white uppercase">Pickup</h4>
                     <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{userData?.sourceAddress}</p>
-                  </div>
-                </div>
-                <div className="bg-gray-50 dark:bg-black/20 p-4 rounded-xl border border-gray-100 dark:border-white/5 flex items-start gap-3">
-                  <span className="text-lg">🎯</span>
-                  <div>
-                    <h4 className="text-xs font-bold text-gray-900 dark:text-white uppercase">Drop-off</h4>
-                    <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{userData?.destAddress}</p>
                   </div>
                 </div>
               </div>

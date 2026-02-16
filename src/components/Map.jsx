@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 // High-Fidelity Realistic Sedan SVG as a React Component string
 const CAR_SVG_HTML = `
@@ -48,16 +48,19 @@ export default function Map({ locations, selectedUser, source, destination, onDi
   const directionsRenderer = useRef(null);
   const historyPolyline = useRef(null);
   const previewDirectionsRenderer = useRef(null); // Separate renderer for modal preview
+  const [isScriptLoaded, setIsScriptLoaded] = useState(false);
 
   useEffect(() => {
     const initMap = () => {
-      if (!window.google || !window.google.maps) return false;
+      if (!window.google || !window.google.maps) {
+        return false; // Silently return false during retry attempts
+      }
       if (!mapContainerRef.current) return false;
       if (mapRef.current) return true;
 
       try {
         mapRef.current = new google.maps.Map(mapContainerRef.current, {
-          mapId: "DEMO_MAP_ID", // Google's demo Map ID for testing
+          mapId: "DEMO_MAP_ID",
           zoom: 16,
           center: { lat: 28.6139, lng: 77.209 },
           tilt: 45,
@@ -77,25 +80,35 @@ export default function Map({ locations, selectedUser, source, destination, onDi
         });
 
         previewDirectionsRenderer.current = new google.maps.DirectionsRenderer({
-          map: null, // Initially not attached
+          map: null,
           suppressMarkers: true,
           polylineOptions: {
-            strokeColor: "#60a5fa", // Blue line for route preview
+            strokeColor: "#60a5fa",
             strokeWeight: 5,
             strokeOpacity: 0.8
           }
         });
 
+        console.log("✅ Google Maps initialized successfully");
+        setIsScriptLoaded(true);
         return true;
       } catch (error) {
-        console.error("Map initialization error:", error);
+        // Don't log errors during retry attempts
         return false;
       }
     };
 
+    // Retry logic with timeout
+    const maxRetries = 50; // 5 seconds total
+    let retryCount = 0;
+
     if (!initMap()) {
       const intervalId = setInterval(() => {
+        retryCount++;
         if (initMap()) {
+          clearInterval(intervalId);
+        } else if (retryCount >= maxRetries) {
+          console.error("❌ Failed to load Google Maps after 5 seconds. Check your API key and internet connection.");
           clearInterval(intervalId);
         }
       }, 100);
@@ -151,37 +164,7 @@ export default function Map({ locations, selectedUser, source, destination, onDi
         const bearing = getBearing(prevPos, currentPos);
 
         if (!liveMarkers.current[token]) {
-          // Pulse Effect
-          pulseMarkers.current[token] = new google.maps.Marker({
-            map: mapRef.current,
-            position: currentPos,
-            icon: {
-              path: google.maps.SymbolPath.CIRCLE,
-              scale: 15,
-              fillColor: "#3b82f6",
-              fillOpacity: 0.4,
-              strokeWeight: 0,
-            },
-            clickable: false,
-            zIndex: 1
-          });
-
-          // Animation for Pulse
-          let pulseDir = 1, pulseScale = 15;
-          const animatePulse = () => {
-            if (!pulseMarkers.current[token]) return;
-            pulseScale += 0.3 * pulseDir;
-            if (pulseScale > 22) pulseDir = -1;
-            if (pulseScale < 15) pulseDir = 1;
-            const pm = pulseMarkers.current[token];
-            // Check if marker still exists/is valid
-            if (pm.getMap()) {
-              const icon = pm.getIcon();
-              pm.setIcon({ ...icon, scale: pulseScale, fillOpacity: 0.5 - (pulseScale - 15) / 20 });
-              requestAnimationFrame(animatePulse);
-            }
-          };
-          requestAnimationFrame(animatePulse);
+          // Note: Removed deprecated pulse marker to avoid Google Maps API warnings
 
           // Advanced Marker
           const carContent = document.createElement("div");
@@ -213,10 +196,9 @@ export default function Map({ locations, selectedUser, source, destination, onDi
             const progress = Math.min((timestamp - start) / duration, 1);
             const lat = prevPos.lat + (currentPos.lat - prevPos.lat) * progress;
             const lng = prevPos.lng + (currentPos.lng - prevPos.lng) * progress;
-            const pos = { lat, lng };
+            const pos = new google.maps.LatLng(lat, lng);
 
             if (marker) marker.position = pos;
-            if (pulse) pulse.setPosition(pos);
 
             if (progress === 0 && carWrapper) {
               carWrapper.style.transform = `rotate(${bearing}deg)`;
@@ -298,56 +280,78 @@ export default function Map({ locations, selectedUser, source, destination, onDi
     }
   }, [source, destination, showRoutePreview]);
 
-  // Source/Dest
+  // Source/Dest (Using AdvancedMarkerElement to avoid deprecation)
   useEffect(() => {
     if (!mapRef.current) return;
 
-    const createMarker = (pos, color, label) => new google.maps.Marker({
-      map: mapRef.current,
-      position: pos,
-      label: { text: label, color: "white", fontWeight: "bold", fontSize: "10px" },
-      icon: {
-        path: google.maps.SymbolPath.CIRCLE,
-        scale: 12,
-        fillColor: color,
-        fillOpacity: 1,
-        strokeWeight: 3,
-        strokeColor: "white"
-      },
-      zIndex: 5
-    });
+    const createPinElement = async (color) => {
+      const { PinElement } = await google.maps.importLibrary("marker");
+      return new PinElement({
+        background: color,
+        borderColor: "white",
+        scale: 1.2
+      });
+    };
 
-    if (source) {
-      if (!sourceMarker.current) sourceMarker.current = createMarker(source, "#3b82f6", "S");
-      else sourceMarker.current.setPosition(source);
-    }
-    if (destination) {
-      if (!destMarker.current) destMarker.current = createMarker(destination, "#10b981", "D");
-      else destMarker.current.setPosition(destination);
-    }
+    const updateMarkers = async () => {
+      const { AdvancedMarkerElement } = await google.maps.importLibrary("marker");
+
+      if (source) {
+        if (!sourceMarker.current) {
+          const pinElement = await createPinElement("#3b82f6");
+          sourceMarker.current = new AdvancedMarkerElement({
+            map: mapRef.current,
+            position: source,
+            content: pinElement,
+            zIndex: 5
+          });
+        } else {
+          sourceMarker.current.position = source;
+        }
+      }
+      if (destination) {
+        if (!destMarker.current) {
+          const pinElement = await createPinElement("#10b981");
+          destMarker.current = new AdvancedMarkerElement({
+            map: mapRef.current,
+            position: destination,
+            content: pinElement,
+            zIndex: 5
+          });
+        } else {
+          destMarker.current.position = destination;
+        }
+      }
+    };
+
+    updateMarkers();
   }, [source, destination]);
 
-  // Passenger's Own Location Marker
+  // Passenger's Own Location Marker (Using AdvancedMarkerElement)
   useEffect(() => {
     if (passengerPos && mapRef.current) {
-      if (!passengerMarker.current) {
-        passengerMarker.current = new google.maps.Marker({
-          map: mapRef.current,
-          position: passengerPos,
-          icon: {
-            path: google.maps.SymbolPath.CIRCLE,
-            scale: 8,
-            fillColor: "#3b82f6",
-            fillOpacity: 1,
-            strokeWeight: 4,
-            strokeColor: "#ffffff",
-          },
-          title: "My Location",
-          zIndex: 20
-        });
-      } else {
-        passengerMarker.current.setPosition(passengerPos);
-      }
+      const updatePassengerMarker = async () => {
+        const { AdvancedMarkerElement, PinElement } = await google.maps.importLibrary("marker");
+
+        if (!passengerMarker.current) {
+          const pinElement = new PinElement({
+            background: "#3b82f6",
+            borderColor: "#ffffff",
+            scale: 1.0
+          });
+
+          passengerMarker.current = new AdvancedMarkerElement({
+            map: mapRef.current,
+            position: passengerPos,
+            content: pinElement,
+            title: "My Location",
+            zIndex: 20
+          });
+        } else {
+          passengerMarker.current.position = passengerPos;
+        }
+      };
+      updatePassengerMarker();
     }
   }, [passengerPos]);
 

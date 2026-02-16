@@ -270,24 +270,24 @@ export default function Admin() {
             <table className="w-full text-left border-collapse">
               <thead className="sticky top-0 bg-white z-10 shadow-sm border-b border-gray-100">
                 <tr>
-                  <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase">Passenger</th>
-                  <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase">Driver</th>
-                  <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase">Status</th>
-                  <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase">Action</th>
+                  <th className="px-3 py-3 sm:px-6 sm:py-4 text-xs font-bold text-gray-400 uppercase">Passenger</th>
+                  <th className="px-3 py-3 sm:px-6 sm:py-4 text-xs font-bold text-gray-400 uppercase">Driver</th>
+                  <th className="px-3 py-3 sm:px-6 sm:py-4 text-xs font-bold text-gray-400 uppercase">Status</th>
+                  <th className="px-3 py-3 sm:px-6 sm:py-4 text-xs font-bold text-gray-400 uppercase">Action</th>
                 </tr>
               </thead>
-              <tbody className="text-sm">
+              <tbody className="text-xs sm:text-sm">
                 {users.map(u => (
                   <tr key={u._id} className="border-b border-gray-50 hover:bg-gray-50">
-                    <td className="px-6 py-4 font-bold">{u.name}</td>
-                    <td className="px-6 py-4">{u.driverName || "N/A"}</td>
-                    <td className="px-6 py-4">
+                    <td className="px-3 py-3 sm:px-6 sm:py-4 font-bold">{u.name}</td>
+                    <td className="px-3 py-3 sm:px-6 sm:py-4">{u.driverName || "N/A"}</td>
+                    <td className="px-3 py-3 sm:px-6 sm:py-4">
                       <span className={`px-2 py-1 rounded-lg text-[10px] font-bold uppercase ${u.status === 'ACTIVE' ? 'bg-primary/20 text-primary-dark' : 'bg-gray-100 text-gray-500'
                         }`}>
                         {u.status}
                       </span>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-3 py-3 sm:px-6 sm:py-4">
                       {u.status === 'ACTIVE' && (
                         <button onClick={() => handleTrackUser(u)} className="text-primary-dark hover:underline font-medium">Track</button>
                       )}

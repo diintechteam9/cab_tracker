@@ -8,7 +8,7 @@ const KanbanBoard = ({ users, locations, onTrack, onComplete, onViewHistory }) =
 
     // Common Column Wrapper
     const Column = ({ title, count, color, users, emptyText, icon }) => (
-        <div className="w-full md:w-1/3 flex flex-col gap-4 min-w-[300px]">
+        <div className="w-full md:w-1/3 flex flex-col gap-4 min-w-0 sm:min-w-[300px]">
             <div className="flex items-center justify-between px-1">
                 <h3 className={`font-bold text-gray-700 dark:text-gray-200 flex items-center gap-2`}>
                     <span className={`w-2 h-2 rounded-full ${color}`}></span>

@@ -11,7 +11,7 @@ export const loadGoogleMapsScript = () => {
 
         // Create script element
         const script = document.createElement('script');
-        script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=places,marker`;
+        script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=places,marker&v=weekly&loading=async`;
         script.async = true;
         script.defer = true;
 

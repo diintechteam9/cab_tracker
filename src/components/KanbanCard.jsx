@@ -60,7 +60,7 @@ const KanbanCard = ({ user, status, onTrack, onComplete, onViewHistory, location
                     </div>
                     <div className="flex items-center gap-2">
                         <div className="flex-1 bg-white dark:bg-gray-900 px-2 py-1.5 rounded border border-gray-200 dark:border-gray-600 overflow-hidden">
-                            <span className="text-xs text-gray-500 dark:text-gray-400 font-mono truncate block">
+                            <span className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 font-mono truncate block">
                                 {window.location.origin}/track?token={user.token?.slice(-8)}...
                             </span>
                         </div>
@@ -71,10 +71,10 @@ const KanbanCard = ({ user, status, onTrack, onComplete, onViewHistory, location
                                     .then(() => alert('Link copied! Add &role=driver or &role=passenger before sending'))
                                     .catch(err => console.error('Copy failed:', err));
                             }}
-                            className="bg-primary hover:bg-primary-dark text-white p-2 rounded-lg transition-colors flex-shrink-0"
+                            className="bg-primary hover:bg-primary-dark text-white p-1.5 sm:p-2 rounded-lg transition-colors flex-shrink-0 active:scale-95"
                             title="Copy tracking link"
                         >
-                            <span className="material-icons text-sm">content_copy</span>
+                            <span className="material-icons text-xs sm:text-sm">content_copy</span>
                         </button>
                     </div>
                     <p className="text-[10px] text-gray-400 mt-1.5">
@@ -85,7 +85,7 @@ const KanbanCard = ({ user, status, onTrack, onComplete, onViewHistory, location
                 {/* Track Button */}
                 <button
                     onClick={() => onTrack && onTrack(user)}
-                    className="w-full bg-primary hover:bg-primary-dark text-background-dark text-xs font-bold py-2.5 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
+                    className="w-full bg-primary hover:bg-primary-dark text-background-dark text-xs sm:text-sm font-bold py-2 sm:py-2.5 px-4 rounded-lg transition-colors flex items-center justify-center gap-2 active:scale-95"
                 >
                     <span className="material-icons text-sm">map</span>
                     Track Route
@@ -175,7 +175,7 @@ const KanbanCard = ({ user, status, onTrack, onComplete, onViewHistory, location
                         onClick={() => onComplete && onComplete(user._id)}
                         className="px-3 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors"
                     >
-                        <span className="material-icons text-sm">check</span>
+                        <span className="material-icons text-xs sm:text-sm">check</span>
                     </button>
                 </div>
             </div>

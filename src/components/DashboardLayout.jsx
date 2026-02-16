@@ -52,9 +52,9 @@ const DashboardLayout = ({ children, activeTab, setActiveTab, onNewJourney }) =>
                         <p className="text-sm text-gray-500 dark:text-gray-400">Manage real-time logistics and trip history</p>
                     </div>
 
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto mt-4 sm:mt-0">
                         {/* Tab Switcher */}
-                        <div className="flex items-center bg-surface-light dark:bg-surface-dark rounded-lg p-1 border border-neutral-light dark:border-neutral-dark shadow-sm">
+                        <div className="flex-1 sm:flex-none flex items-center bg-surface-light dark:bg-surface-dark rounded-lg p-1 border border-neutral-light dark:border-neutral-dark shadow-sm">
                             {[
                                 { id: 'kanban', label: 'Board' },
                                 { id: 'list', label: 'List' },
@@ -63,9 +63,9 @@ const DashboardLayout = ({ children, activeTab, setActiveTab, onNewJourney }) =>
                                 <button
                                     key={tab.id}
                                     onClick={() => setActiveTab(tab.id)}
-                                    className={`px-3 py-1.5 rounded text-sm font-medium transition-colors ${activeTab === tab.id
-                                            ? 'bg-primary/20 text-primary-dark dark:text-primary'
-                                            : 'text-gray-500 hover:text-gray-800 dark:hover:text-white'
+                                    className={`flex-1 sm:flex-none px-3 py-1.5 sm:px-3 sm:py-1.5 rounded text-xs sm:text-sm font-medium transition-colors ${activeTab === tab.id
+                                        ? 'bg-primary/20 text-primary-dark dark:text-primary'
+                                        : 'text-gray-500 hover:text-gray-800 dark:hover:text-white'
                                         }`}
                                 >
                                     {tab.label}
@@ -75,9 +75,9 @@ const DashboardLayout = ({ children, activeTab, setActiveTab, onNewJourney }) =>
 
                         <button
                             onClick={onNewJourney}
-                            className="bg-primary hover:bg-primary-dark text-background-dark font-semibold px-4 py-2 rounded-lg flex items-center gap-2 shadow-soft transition-colors"
+                            className="bg-primary hover:bg-primary-dark text-background-dark font-semibold px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg flex items-center gap-1 sm:gap-2 shadow-soft transition-colors text-xs sm:text-base whitespace-nowrap active:scale-95"
                         >
-                            <span className="material-icons text-sm">add</span>
+                            <span className="material-icons text-sm sm:text-base">add</span>
                             New Journey
                         </button>
                     </div>
