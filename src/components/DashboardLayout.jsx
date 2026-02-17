@@ -12,7 +12,7 @@ const DashboardLayout = ({ children, activeTab, setActiveTab, onNewJourney }) =>
                     <div className="w-8 h-8 rounded bg-primary flex items-center justify-center text-background-dark font-bold text-lg">
                         <span className="material-icons text-xl">near_me</span>
                     </div>
-                    <h1 className="text-xl font-bold tracking-tight">
+                    <h1 className="text-base sm:text-lg md:text-xl font-bold tracking-tight">
                         FleetOps <span className="text-gray-400 dark:text-gray-500 font-normal">Manager</span>
                     </h1>
                 </div>
@@ -27,16 +27,16 @@ const DashboardLayout = ({ children, activeTab, setActiveTab, onNewJourney }) =>
                         />
                     </div>
 
-                    <div className="flex items-center gap-3">
-                        <button className="w-8 h-8 rounded-full bg-background-light dark:bg-background-dark hover:bg-neutral-light dark:hover:bg-neutral-dark flex items-center justify-center transition-colors">
+                    <div className="flex items-center gap-2 sm:gap-3">
+                        <button className="hidden sm:flex w-8 h-8 rounded-full bg-background-light dark:bg-background-dark hover:bg-neutral-light dark:hover:bg-neutral-dark items-center justify-center transition-colors">
                             <span className="material-icons text-gray-500 dark:text-gray-400 text-lg">notifications</span>
                         </button>
-                        <div className="h-8 w-px bg-neutral-light dark:bg-neutral-dark"></div>
+                        <div className="hidden sm:block h-8 w-px bg-neutral-light dark:bg-neutral-dark"></div>
                         <div className="flex items-center gap-2 cursor-pointer">
-                            <div className="w-8 h-8 rounded-full border border-neutral-light dark:border-neutral-dark bg-gray-200 flex items-center justify-center font-bold text-gray-500">
+                            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full border border-neutral-light dark:border-neutral-dark bg-gray-200 flex items-center justify-center font-bold text-gray-500 text-xs sm:text-sm">
                                 AM
                             </div>
-                            <span className="text-sm font-medium hidden sm:block">Alex M.</span>
+                            <span className="text-sm font-medium hidden md:block">Alex M.</span>
                         </div>
                     </div>
                 </div>
